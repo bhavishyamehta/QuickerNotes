@@ -13,6 +13,7 @@ composeMultiplatform = "1.9.3"
 junit = "4.13.2"
 kotlin = "2.3.0"
 
+navigationCompose = "2.9.1"
 room = "2.8.4"
 sqlite = "2.6.2"
 ksp = "2.2.10-2.0.2"
@@ -33,6 +34,7 @@ androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 
 androidx-room-sqlite-wrapper = { module = "androidx.room:room-sqlite-wrapper", version.ref = "room" }
+navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 
 
 [plugins]
