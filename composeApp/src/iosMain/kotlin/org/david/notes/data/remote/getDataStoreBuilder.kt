@@ -1,17 +1,20 @@
-package org.david.notes
+package org.david.notes.data.remote
 
-
-import androidx.room.Room
-import androidx.room.RoomDatabase
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import kotlinx.cinterop.ExperimentalForeignApi
-import org.david.notes.data.db.NoteDatabase
+import org.david.notes.data.cache.createDataStore
+import org.david.notes.data.cache.dataStoreFileName
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDomainMask
 
-fun getDatabaseBuilder(): RoomDatabase.Builder<NoteDatabase> {
-    val dbPath = getDocumentPath() + "/note_database.db"
-    return Room.databaseBuilder(name = dbPath)
+fun createDataStore(): DataStore<Preferences> {
+    return createDataStore(
+        producePath ={
+            getDocumentPath() + "/${dataStoreFileName}"
+        }
+    )
 }
 
 @OptIn(ExperimentalForeignApi::class)
@@ -25,5 +28,3 @@ fun getDocumentPath(): String {
     )
     return requireNotNull(documentDirectory?.path)
 }
-
-

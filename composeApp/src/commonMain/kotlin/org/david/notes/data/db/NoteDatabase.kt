@@ -1,19 +1,20 @@
-package org.david.notes.db
+package org.david.notes.data.db
 
 import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
-import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import org.david.notes.models.Note
+import org.david.notes.models.SyncMetadata
 
-@Database(entities = [Note::class], version = 1, exportSchema = false)
+@Database(entities = [Note::class, SyncMetadata::class], version = 1, exportSchema = false)
 @ConstructedBy(NoteDatabaseConstructor::class)
 abstract class NoteDatabase : RoomDatabase() {
-    abstract fun notesDao(): NotesDao
+    abstract fun notesDao(): NoteDao
+    abstract fun syncMetaDataDao(): SyncDataDao
 }
 
 @Suppress("KotlinNoActualForExpect")
