@@ -246,7 +246,7 @@ data class ColorFamily(
 
 @Composable
 fun QuickNotesAppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false,
     content: @Composable() () -> Unit
 ) {
     val colorScheme = when {

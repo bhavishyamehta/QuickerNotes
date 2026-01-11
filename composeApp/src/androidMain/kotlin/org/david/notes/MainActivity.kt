@@ -7,9 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.room.Room.databaseBuilder
-import org.david.notes.db.NoteDatabase
-import org.david.notes.db.getNoteDatabase
+import org.david.notes.data.cache.DataStoreManager
+import org.david.notes.data.db.getNoteDatabase
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,7 +17,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             App(
-                database = getNoteDatabase(getDatabaseBuilder(this@MainActivity))
+                database = getNoteDatabase(getDatabaseBuilder(this@MainActivity)),
+                dataStoreManager = DataStoreManager(createDataStorePath(this@MainActivity))
             )
         }
     }
@@ -28,5 +28,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppAndroidPreview() {
     val database = getNoteDatabase(getDatabaseBuilder(LocalContext.current))
-    App(database)
+    val dataStoreManager = DataStoreManager(createDataStorePath(LocalContext.current))
+    App(database, dataStoreManager)
 }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -20,6 +21,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color.Companion.Transparent
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,52 +39,88 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import org.david.notes.HomeViewModel
-import org.david.notes.db.NoteDatabase
+import org.david.notes.data.cache.DataStoreManager
+import org.david.notes.data.db.NoteDatabase
 import org.david.notes.models.Note
 import org.david.notes.notes.ListNotesScreen
 import org.jetbrains.compose.resources.painterResource
 import quickernotes.composeapp.generated.resources.Res
 import quickernotes.composeapp.generated.resources.ic_phone
 import quickernotes.composeapp.generated.resources.rafiki
+import quickernotes.composeapp.generated.resources.sync
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(database: NoteDatabase, navController: NavController) {
-    val viewModel = viewModel { HomeViewModel(database) }
+fun HomeScreen(
+    database: NoteDatabase,
+    dataStoreManager: DataStoreManager,
+    navController: NavController
+) {
+    val viewModel = viewModel { HomeViewModel(database, dataStoreManager = dataStoreManager) }
     val bottomSheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
+    val email = remember { mutableStateOf("") }
+    val userID = remember { mutableStateOf("") }
+    LaunchedEffect(true) {
+        email.value = dataStoreManager.getEmail() ?: ""
+        userID.value = dataStoreManager.getUserId() ?: ""
+    }
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showBottomSheet = true },
-                shape = CircleShape
-            ) {
-                Text("+", fontSize = 18.sp)
+            FloatingActionButton(onClick = {
+                showBottomSheet = true
+            }, shape = CircleShape) {
+                Text(text = "+", fontSize = 18.sp)
             }
-        }
-    ) {
-        val notes by viewModel.notes.collectAsStateWithLifecycle(emptyList())
-        Column(modifier = Modifier.fillMaxWidth().padding(it)) {
-            Box(
-                modifier = Modifier.fillMaxWidth()
-            ) {
+        }) {
+
+
+        val notes = viewModel.notes.collectAsStateWithLifecycle(emptyList())
+        Column(modifier = Modifier.padding(it)) {
+            Box(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Notes",
                     modifier = Modifier.fillMaxWidth().padding(16.dp).align(Alignment.Center),
                     fontSize = 30.sp
                 )
-                Image(
-                    painterResource(Res.drawable.ic_phone),
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 16.dp).size(30.dp).clickable {
-                        navController.navigate("signup")
-                    }.align(Alignment.CenterEnd)
-                )
+                Row(
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    email?.value?.let {
+                        Text(it)
+                    }
+                    Image(
+                        painterResource(Res.drawable.ic_phone),
+                        null,
+                        modifier = Modifier.padding(end = 16.dp).size(35.dp).padding(4.dp)
+                            .clickable {
+                                coroutineScope.launch {
+                                    if (dataStoreManager.getToken() != null) {
+                                        navController.navigate("profile")
+                                    } else {
+                                        navController.navigate("signup")
+                                    }
+                                }
+                            })
+                    if(email.value.isNotEmpty()) {
+                        Image(
+                            painterResource(Res.drawable.sync),
+                            null,
+                            modifier = Modifier.padding(end = 16.dp).size(35.dp).padding(4.dp)
+                                .clickable {
+                                    coroutineScope.launch {
+                                        viewModel.performSync()
+                                    }
+                                })
+                    }
+                }
+
             }
-            if (notes.isNotEmpty()) {
-                ListNotesScreen(notes)
+            if (notes.value.isNotEmpty()) {
+                ListNotesScreen(notes.value)
             } else {
                 EmptyView()
             }
@@ -91,13 +130,13 @@ fun HomeScreen(database: NoteDatabase, navController: NavController) {
             ModalBottomSheet(onDismissRequest = {
                 showBottomSheet = false
             }, sheetState = bottomSheetState) {
-                AddItemDialog(onCancel = {
+                AddItemDialog(userID = userID.value, onCancel = {
                     coroutineScope.launch {
                         bottomSheetState.hide()
                     }
                     showBottomSheet = false
-                }, onSave = { note ->
-                    viewModel.addNote(note)
+                }, {
+                    viewModel.addNote(it)
                     coroutineScope.launch {
                         bottomSheetState.hide()
                     }
@@ -108,54 +147,49 @@ fun HomeScreen(database: NoteDatabase, navController: NavController) {
     }
 }
 
+
 @Composable
-fun AddItemDialog(onCancel: () -> Unit, onSave: (Note) -> Unit) {
+fun AddItemDialog(userID: String, onCancel: () -> Unit, onSave: (Note) -> Unit) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.padding(16.dp)) {
-        val colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent,
+        val colour = TextFieldDefaults.colors(
+            focusedContainerColor = Transparent,
+            unfocusedContainerColor = Transparent,
         )
+
         TextField(
             value = title,
             onValueChange = { title = it },
-            colors = colors,
+            colors = colour,
+            modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(text = "Title", fontSize = 22.sp)
             },
-            modifier = Modifier.fillMaxWidth(),
             textStyle = TextStyle(fontSize = 22.sp)
         )
         TextField(
             value = description,
             onValueChange = { description = it },
-            colors = colors,
+            colors = colour,
             placeholder = {
-                Text(text = "Description")
+                Text(text = "Say something")
             },
             modifier = Modifier.fillMaxWidth(),
             minLines = 5
         )
         Row(modifier = Modifier.align(Alignment.End)) {
-            Text(
-                text = "Cancel",
-                modifier = Modifier.padding(8.dp).clickable {
-                    onCancel()
-                }
-            )
-            Text(
-                text = "Save",
-                modifier = Modifier.padding(8.dp).clickable {
-                    onSave(Note(0, title, description))
-                }
-            )
+            Text(text = "Cancel", modifier = Modifier.padding(8.dp).clickable {
+                onCancel()
+            })
+            Text(text = "Save", modifier = Modifier.padding(8.dp).clickable {
+                onSave(Note(title = title, description = description, userId = userID, isDirty = true))
+            })
         }
-
     }
-
 }
+
 
 @Composable
 fun EmptyView() {
@@ -164,12 +198,12 @@ fun EmptyView() {
             Image(
                 painterResource(Res.drawable.rafiki),
                 contentDescription = null,
-                modifier = Modifier.size(300.dp)
+                modifier = Modifier.size(200.dp)
             )
             Text(
                 text = "Create your first note !",
                 modifier = Modifier.align(Alignment.CenterHorizontally),
-                style = MaterialTheme.typography.titleLarge,
+                fontSize = 16.sp
             )
         }
     }

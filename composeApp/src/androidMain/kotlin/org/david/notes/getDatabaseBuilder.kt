@@ -3,7 +3,7 @@ package org.david.notes
 import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import org.david.notes.db.NoteDatabase
+import org.david.notes.data.db.NoteDatabase
 
 fun getDatabaseBuilder(context: Context): RoomDatabase.Builder<NoteDatabase> {
     val appContext = context.applicationContext
